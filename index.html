@@ -414,16 +414,45 @@
             }, 1000);
         }
 
+        // Object-fit: cover implementation to prevent squeezing/distortion
+        function getCropParams(sourceW, sourceH, targetW, targetH) {
+            const sourceRatio = sourceW / sourceH;
+            const targetRatio = targetW / targetH;
+            let sWidth = sourceW;
+            let sHeight = sourceH;
+            let sx = 0;
+            let sy = 0;
+
+            if (sourceRatio > targetRatio) {
+                sWidth = sourceH * targetRatio;
+                sx = (sourceW - sWidth) / 2;
+            } else {
+                sHeight = sourceW / targetRatio;
+                sy = (sourceH - sHeight) / 2;
+            }
+            return { sx, sy, sWidth, sHeight };
+        }
+
         function takePhoto() {
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            const targetW = 900;
+            const targetH = 675;
+            canvas.width = targetW;
+            canvas.height = targetH;
             const ctx = canvas.getContext('2d');
             
-            // Draw current frame (No mirroring, true to life)
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Sharper Rendering Setup
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // Calculate precise center-crop coordinates
+            const crop = getCropParams(video.videoWidth, video.videoHeight, targetW, targetH);
             
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            // Draw current frame (No mirroring, perfectly cropped)
+            ctx.drawImage(video, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, targetW, targetH);
+            
+            // Lossless export
+            const dataUrl = canvas.toDataURL('image/png');
             capturedImages[currentShot] = dataUrl;
             
             const img = document.createElement('img');
@@ -491,6 +520,10 @@
             c.height = hdHeight;
             const ctx = c.getContext('2d');
 
+            // Sharper Rendering Settings
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
             // Coordinates precisely mapping to CSS
             const photoX = 150;
             const photoW = 900;
@@ -534,6 +567,8 @@
                         // Reset opacity & mode before EVERY draw call
                         ctx.globalAlpha = 1.0;
                         ctx.globalCompositeOperation = 'source-over';
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
 
                         // Draw strict black border behind the photo
                         ctx.fillStyle = '#000000';
@@ -546,7 +581,7 @@
                     }
                 }
 
-                // 4. Trigger Download via Blob (Memory Safe across browsers)
+                // 4. Trigger Download via Blob (Memory Safe across browsers, Lossless)
                 c.toBlob((blob) => {
                     if (!blob) {
                         console.error("Canvas export failed");
