@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voyager's Studio | Skyrocket Studios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --purple-deep: #2D0A5E;
+            --purple-bright: #7B2FBE;
+            --gold: #F5A623;
+            --white: #FFFFFF;
+            --black: #000000;
+            --bg-void: #05010a;
+            
+            /* UI Constants */
+            --border-thick: 3px solid var(--black);
+            --shadow-hard: 8px 8px 0px var(--black);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-void);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--white);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ── BACKGROUND ELEMENTS ──────────────────────────────── */
+        #solar-system {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 50vw; 
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .rocket-container {
+            position: fixed;
+            top: 50%;
+            left: 5vw; 
+            transform: translateY(-50%);
+            width: 200px;
+            z-index: -1;
+            animation: floatRocket 6s ease-in-out infinite;
+        }
+
+        @keyframes floatRocket {
+            0%, 100% { transform: translateY(-55%) rotate(-5deg); }
+            50% { transform: translateY(-45%) rotate(5deg); }
+        }
+
+        /* ── MAIN BOOTH UI ────────────────────────────────────── */
+        #booth-shell {
+            background: var(--purple-deep);
+            border: var(--border-thick);
+            box-shadow: var(--shadow-hard);
+            width: min(95vw, 1100px);
+            height: min(90vh, 800px);
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            position: relative;
+            z-index: 10;
+            margin: 0 auto; 
+            transition: background-color 0.4s ease;
+        }
+
+        /* Left Side: Camera & Controls */
+        .camera-bay {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border-right: var(--border-thick);
+        }
+
+        .viewfinder-container {
+            flex: 1;
+            background: var(--black);
+            border: var(--border-thick);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* CRITICAL: No mirroring for true-to-life text readability */
+            transform: scaleX(1);
+        }
+
+        #countdown-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            font-size: 8rem;
+            color: var(--gold);
+            text-shadow: 4px 4px 0px var(--black);
+            z-index: 20;
+        }
+
+        #flash-overlay {
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* Right Side: Strip Preview */
+        .strip-bay {
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Fixed Dimensions matching the 1200x3600 Export */
+        #strip-preview {
+            width: 1200px;
+            height: 3600px;
+            position: relative;
+            flex-shrink: 0;
+            transform-origin: top center;
+            background: var(--white);
+        }
+
+        /* Layering Fix: Graphic background sits strictly behind photos */
+        #strip-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; 
+            pointer-events: none;
+        }
+
+        .photo-slot {
+            position: absolute;
+            width: 900px;  /* 1200px - (150px padding * 2) */
+            height: 675px; /* 4:3 Aspect Ratio */
+            left: 150px;
+            background: #111;
+            z-index: 2; /* 100% Opaque, sits ON TOP of the background Graphic */
+            opacity: 1;
+            overflow: hidden;
+            border: 4px solid var(--black); /* Distinct container lines */
+        }
+
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Precisely calculated Y-coordinates */
+        .photo-slot[data-index="0"] { top: 400px; }
+        .photo-slot[data-index="1"] { top: 1115px; }
+        .photo-slot[data-index="2"] { top: 1830px; }
+        .photo-slot[data-index="3"] { top: 2545px; }
+
+        /* ── BUTTONS & UI ─────────────────────────────────────── */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            padding: 1rem 1.5rem;
+            border: var(--border-thick);
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.1s, background 0.3s, color 0.3s;
+            box-shadow: 4px 4px 0px var(--black);
+            flex: 1;
+        }
+
+        .btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px var(--black);
+        }
+
+        .btn-gold { background: var(--gold); color: var(--black); }
+        .btn-cancel { background: #ff4444; color: white; display: none; }
+        .btn-error { background: #555; color: white; display: none; }
+
+        /* TACTICAL COMMAND CENTER DOWNLOAD BUTTON */
+        #download-btn {
+            border: 4px solid var(--black);
+            background: var(--purple-deep);
+            color: var(--white);
+            box-shadow: 0 0 15px var(--purple-bright), 6px 6px 0px var(--black);
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+
+        #download-btn:hover {
+            background: var(--gold);
+            color: var(--black);
+            box-shadow: 0 0 25px var(--gold), 2px 2px 0px var(--black);
+            transform: translate(4px, 4px);
+            animation: glitch-color 0.3s infinite alternate;
+        }
+
+        @keyframes glitch-color {
+            0% { text-shadow: 2px 0px 0px #ff00ff, -2px 0px 0px #00ffff; }
+            100% { text-shadow: -2px 0px 0px #ff00ff, 2px 0px 0px #00ffff; }
+        }
+
+        .style-toggles {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.4rem;
+            width: 100%;
+        }
+
+        .style-btn {
+            padding: 0.8rem 0;
+            border: var(--border-thick);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            font-size: 0.65rem;
+            cursor: pointer;
+            background: var(--white);
+            color: var(--black);
+            transition: transform 0.2s, background 0.2s;
+            text-align: center;
+        }
+
+        .style-btn.active {
+            background: var(--gold);
+            transform: scale(1.05);
+        }
+
+        #error-msg {
+            color: #ff4444;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            display: none;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="solar-system"></canvas>
+
+    <div class="rocket-container">
+        <svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 10 C30 50 20 100 20 130 L80 130 C80 100 70 50 50 10 Z" fill="white" stroke="black" stroke-width="4"/>
+            <path d="M20 100 L5 140 L25 130 Z" fill="#F5A623" stroke="black" stroke-width="3"/>
+            <path d="M80 100 L95 140 L75 130 Z" fill="#F5A623" stroke="black" stroke-width="3"/>
+            <circle cx="50" cy="60" r="12" fill="#7B2FBE" stroke="black" stroke-width="3"/>
+            <path d="M40 130 Q50 160 60 130" fill="#F5A623" stroke="black" stroke-width="2">
+                <animate attributeName="d" values="M40 130 Q50 160 60 130;M40 130 Q50 180 60 130;M40 130 Q50 160 60 130" dur="0.2s" repeatCount="indefinite" />
+            </path>
+        </svg>
+    </div>
+
+    <div id="booth-shell">
+        <div class="camera-bay">
+            <h2 style="font-family:'DM Sans', sans-serif; font-weight:900; letter-spacing:2px; font-size:1.2rem;">VOYAGER'S STUDIO</h2>
+            
+            <div class="viewfinder-container">
+                <video id="video" autoplay playsinline></video>
+                <div id="countdown-overlay">3</div>
+                <div id="flash-overlay"></div>
+                <div id="camera-placeholder" style="color: #444; text-align: center; font-family: 'DM Sans', sans-serif; font-weight: 700;">
+                    <p>SYSTEM INITIALIZING...</p>
+                </div>
+            </div>
+
+            <div id="error-msg">ACCESS DENIED: PLEASE ENABLE CAMERA</div>
+
+            <div class="controls">
+                <button id="capture-btn" class="btn btn-gold">START MISSION</button>
+                <button id="cancel-btn" class="btn btn-cancel">CANCEL MISSION</button>
+                <button id="retry-btn" class="btn btn-error">RETRY PERMISSIONS</button>
+                <button id="download-btn" class="btn">DOWNLOAD HD STRIP</button>
+            </div>
+
+            <div class="style-toggles">
+                <button class="style-btn active" onclick="setStyle('style1')">STYLE 1</button>
+                <button class="style-btn" onclick="setStyle('style2')">STYLE 2</button>
+                <button class="style-btn" onclick="setStyle('style3')">STYLE 3</button>
+                <button class="style-btn" onclick="setStyle('style4')">STYLE 4</button>
+            </div>
+        </div>
+
+        <div class="strip-bay">
+            <div id="strip-preview">
+                <img id="strip-overlay" src="Style1.jpg" alt="Frame Overlay">
+                <div class="photo-slot" data-index="0"></div>
+                <div class="photo-slot" data-index="1"></div>
+                <div class="photo-slot" data-index="2"></div>
+                <div class="photo-slot" data-index="3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const captureBtn = document.getElementById('capture-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        const flashOverlay = document.getElementById('flash-overlay');
+        const stripPreview = document.getElementById('strip-preview');
+        const stripOverlay = document.getElementById('strip-overlay');
+        const slots = document.querySelectorAll('.photo-slot');
+        const retryBtn = document.getElementById('retry-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        let stream = null;
+        let capturedImages = [null, null, null, null];
+        let isCapturing = false;
+        let currentShot = 0;
+        let captureTimeout = null;
+
+        // ── FINAL DYNAMIC STYLES CONFIGURATION 
+        const styleConfigs = {
+            'style1': { src: 'Style1.jpg', purple: '#FF007F', gold: '#F5A623' },
+            'style2': { src: 'Style2.jpg', purple: '#39FF14', gold: '#F5A623' },
+            'style3': { src: 'Style4.jpg', purple: '#8A2BE2', gold: '#CCFF00' },
+            'style4': { src: 'Style5.jpg', purple: '#FF00FF', gold: '#F5A623' }
+        };
+
+        // ── CAMERA LOGIC ───────────────────────────────────────
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 1280, height: 720 }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                document.getElementById('camera-placeholder').style.display = 'none';
+                errorMsg.style.display = 'none';
+                retryBtn.style.display = 'none';
+                captureBtn.style.display = 'block';
+            } catch (err) {
+                console.error("Camera Error:", err);
+                errorMsg.style.display = 'block';
+                retryBtn.style.display = 'block';
+                captureBtn.style.display = 'none';
+            }
+        }
+
+        // ── CAPTURE SEQUENCE ───────────────────────────────────
+        async function startSequence() {
+            if (isCapturing) return;
+            isCapturing = true;
+            currentShot = 0;
+            capturedImages = [null, null, null, null];
+            slots.forEach(slot => slot.innerHTML = '');
+            
+            captureBtn.style.display = 'none';
+            cancelBtn.style.display = 'block';
+            
+            runShot();
+        }
+
+        function runShot() {
+            if (!isCapturing || currentShot >= 4) {
+                endSequence();
+                return;
+            }
+
+            let count = 3;
+            countdownOverlay.style.display = 'flex';
+            countdownOverlay.innerText = count;
+
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownOverlay.innerText = count;
+                } else {
+                    clearInterval(timer);
+                    countdownOverlay.style.display = 'none';
+                    takePhoto();
+                }
+            }, 1000);
+        }
+
+        function takePhoto() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw current frame (No mirroring, true to life)
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            capturedImages[currentShot] = dataUrl;
+            
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            slots[currentShot].innerHTML = '';
+            slots[currentShot].appendChild(img);
+
+            // Flash effect
+            flashOverlay.style.opacity = '1';
+            setTimeout(() => { flashOverlay.style.opacity = '0'; }, 150);
+
+            currentShot++;
+            captureTimeout = setTimeout(runShot, 1000);
+        }
+
+        function endSequence() {
+            isCapturing = false;
+            captureBtn.style.display = 'block';
+            cancelBtn.style.display = 'none';
+            countdownOverlay.style.display = 'none';
+            clearTimeout(captureTimeout);
+        }
+
+        function cancelSequence() {
+            isCapturing = false;
+            endSequence();
+        }
+
+        // ── UI STYLING ─────────────────────────────────────────
+        function setStyle(styleName) {
+            const config = styleConfigs[styleName];
+            stripOverlay.src = config.src;
+            
+            // Dynamically update UI variables based on selected Style
+            document.documentElement.style.setProperty('--purple-bright', config.purple);
+            document.documentElement.style.setProperty('--gold', config.gold);
+
+            document.querySelectorAll('.style-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase().replace(' ', '') === styleName) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function resizeStrip() {
+            // Functionality preserved exactly as requested
+            const containerHeight = document.querySelector('.strip-bay').offsetHeight - 40;
+            const stripHeight = stripPreview.scrollHeight;
+            const scale = Math.min(1, containerHeight / stripHeight);
+            stripPreview.style.transform = `scale(${scale})`;
+        }
+
+        // ── EXPORT LOGIC (FIXED LAYERING & ROBUST DOWNLOAD) ───
+        async function downloadHD() {
+            if (capturedImages.some(img => img === null)) {
+                alert("PLEASE COMPLETE ALL 4 SHOTS BEFORE DOWNLOADING.");
+                return;
+            }
+
+            const hdWidth = 1200;
+            const hdHeight = 3600;
+            const c = document.createElement('canvas');
+            c.width = hdWidth;
+            c.height = hdHeight;
+            const ctx = c.getContext('2d');
+
+            // Coordinates precisely mapping to CSS
+            const photoX = 150;
+            const photoW = 900;
+            const photoH = 675;
+            const yCoords = [400, 1115, 1830, 2545];
+
+            try {
+                // Async image loading helper. Using onload guarantees resolution only when image is ready.
+                const loadImage = (src) => {
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        // Only add crossOrigin if it's not a base64 data URI to prevent DOMExceptions
+                        if (!src.startsWith('data:')) {
+                            img.crossOrigin = "Anonymous";
+                        }
+                        img.onload = () => resolve(img);
+                        img.onerror = () => reject(new Error('Failed to load image'));
+                        img.src = src;
+                    });
+                };
+
+                // Wait for background and all photos to fully load concurrently
+                const overlayImgPromise = loadImage(stripOverlay.src);
+                const photoPromises = capturedImages.map(src => loadImage(src));
+                
+                const overlayImg = await overlayImgPromise;
+                const loadedPhotos = await Promise.all(photoPromises);
+
+                // 1. Fill base with void color
+                ctx.fillStyle = '#05010a';
+                ctx.fillRect(0, 0, hdWidth, hdHeight);
+
+                // 2. Draw Style PNG background (Bottom Layer)
+                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over'; 
+                ctx.drawImage(overlayImg, 0, 0, hdWidth, hdHeight);
+                
+                // 3. Draw Photos ON TOP (Top Layer - perfectly opaque)
+                for (let i = 0; i < 4; i++) {
+                    if (loadedPhotos[i]) {
+                        // Reset opacity & mode before EVERY draw call
+                        ctx.globalAlpha = 1.0;
+                        ctx.globalCompositeOperation = 'source-over';
+
+                        // Draw strict black border behind the photo
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(photoX - 4, yCoords[i] - 4, photoW + 8, photoH + 8);
+                        
+                        // Draw photo explicitly on top
+                        ctx.globalAlpha = 1.0;
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.drawImage(loadedPhotos[i], photoX, yCoords[i], photoW, photoH);
+                    }
+                }
+
+                // 4. Trigger Download via Blob (Memory Safe across browsers)
+                c.toBlob((blob) => {
+                    if (!blob) {
+                        console.error("Canvas export failed");
+                        alert("Export failed. Please try again.");
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `voyager_strip_${Date.now()}.png`;
+                    link.href = url;
+                    
+                    // Robust trigger via DOM
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Cleanup URL memory
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                }, 'image/png');
+                
+            } catch (error) {
+                console.error("Error generating HD strip:", error);
+                alert("Error processing images for download. Please ensure all captures are complete.");
+            }
+        }
+
+        // ── SMOOTH ORBITAL SOLAR SYSTEM ANIMATION ──────────────
+        function initSolarSystem() {
+            const canvas = document.getElementById('solar-system');
+            const ctx = canvas.getContext('2d');
+            let w, h;
+
+            function resize() {
+                const rect = canvas.getBoundingClientRect();
+                w = canvas.width = rect.width;
+                h = canvas.height = rect.height;
+            }
+
+            // Delta-time ready physics (speeds tuned for ms precision)
+            const planets = [
+                { dist: 80, size: 4, speed: 0.0006, color: '#F5A623', offsetAngle: Math.random() * Math.PI * 2 },
+                { dist: 140, size: 7, speed: 0.0004, color: '#7B2FBE', offsetAngle: Math.random() * Math.PI * 2 },
+                { dist: 200, size: 9, speed: 0.00025, color: '#FFFFFF', offsetAngle: Math.random() * Math.PI * 2 },
+                { dist: 280, size: 6, speed: 0.00015, color: '#F5A623', offsetAngle: Math.random() * Math.PI * 2 },
+                { dist: 380, size: 12, speed: 0.0001, color: '#7B2FBE', offsetAngle: Math.random() * Math.PI * 2 },
+            ];
+
+            function animate(timestamp) {
+                ctx.clearRect(0, 0, w, h);
+                
+                // Position Sun off-center on the right
+                const cx = w * 0.8;
+                const cy = h * 0.5;
+
+                // Sun
+                ctx.beginPath();
+                ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+                ctx.fillStyle = '#F5A623';
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#F5A623';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                planets.forEach(p => {
+                    // Orbit track
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, p.dist, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 8]);
+                    ctx.stroke();
+
+                    // Planet Location (Computed strictly from absolute timestamp prevents jumping)
+                    const currentAngle = p.offsetAngle + (timestamp * p.speed);
+                    const x = cx + Math.cos(currentAngle) * p.dist;
+                    const y = cy + Math.sin(currentAngle) * p.dist;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                });
+
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+            requestAnimationFrame(animate);
+        }
+
+        // ── INITIALIZE ────────────────────────────────────────
+        window.addEventListener('load', () => {
+            initCamera();
+            initSolarSystem();
+            resizeStrip();
+            window.addEventListener('resize', resizeStrip);
+        });
+
+        captureBtn.addEventListener('click', startSequence);
+        cancelBtn.addEventListener('click', cancelSequence);
+        downloadBtn.addEventListener('click', downloadHD);
+        retryBtn.addEventListener('click', initCamera);
+
+    </script>
+</body>
+</html>
